@@ -67,6 +67,7 @@ namespace ProductApi
                 });
 
             services.AddHttpClient();
+            services.AddCors();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -82,6 +83,8 @@ namespace ProductApi
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseCors(a => a.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
 
             app.UseAuthentication();
 

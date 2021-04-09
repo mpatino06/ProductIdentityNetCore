@@ -9,7 +9,7 @@ namespace ProductApi.Models.DTO
     {
         public string Token { get; set; }
         public string UserName { get; set; }
-        public IList<string> Errors { get; set; }
-
+        public IList<string> Roles { get; set; }
+       
     }
 }
