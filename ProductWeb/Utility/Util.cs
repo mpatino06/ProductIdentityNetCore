@@ -1,30 +1,44 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using ProductWEB.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using ProductWEB.Models;
 
 namespace ProductWEB.Utility
 {
-    public class Util<T> where T: class
+    public class Util<T> where T : class
     {
-        public IHttpClientFactory HttpClientFactory { get; }
+        private readonly IHttpClientFactory httpClientFactory;
         public Util(IHttpClientFactory httpClientFactory)
         {
-            HttpClientFactory = httpClientFactory;
+            this.httpClientFactory = httpClientFactory;
         }
-
-        public async Task<ModelStateError> CreateAsync(string url, T entity)
+        public async Task<ModelStateError> CreateAsync(string url, T entity, string token)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url);
+            if (token.Length > 0)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
             request.Content = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, Resource.ContentType);
-            var httpclient = HttpClientFactory.CreateClient();
-            HttpResponseMessage response = await httpclient.SendAsync(request);
-            if (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.InternalServerError)
+
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ModelStateError>(json);
+            }
+
+            if (response.StatusCode == HttpStatusCode.InternalServerError)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<ModelStateError>(json);
@@ -38,12 +52,16 @@ namespace ProductWEB.Utility
                 }
             };
         }
-
-        public async Task<ModelStateError> DeleteAsync(string url, int id)
+        public async Task<ModelStateError> DeleteAsync(string url, int id, string token)
         {
             var request = new HttpRequestMessage(HttpMethod.Delete, url + id);
-            var httpclient = HttpClientFactory.CreateClient();
-            HttpResponseMessage response = await httpclient.SendAsync(request);
+            if (token.Length > 0)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -52,18 +70,19 @@ namespace ProductWEB.Utility
                     Response = new Response()
                     {
                         Errors = new List<Errors>()
-                    {
-                      new Errors(){ ErrorMessage = "No se encontró el producto que se desea eliminar"}
+                        {
+                            new Errors(){ErrorMessage = "No se encontró el producto que desea eliminar" }
+                        }
                     }
-                    }
-
                 };
             }
+
             if (response.StatusCode == HttpStatusCode.InternalServerError)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<ModelStateError>(json);
             }
+
             return new ModelStateError()
             {
                 Response = new Response()
@@ -71,41 +90,56 @@ namespace ProductWEB.Utility
                     Errors = new List<Errors>()
                 }
             };
-
         }
-
-        public async Task<IEnumerable<T>> GetAllAsync(string url)
+        public async Task<IEnumerable<T>> GetAllAsync(string url, string token)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var httpclient = HttpClientFactory.CreateClient();
-            HttpResponseMessage response = await httpclient.SendAsync(request);
+            if (token.Length > 0)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<IEnumerable<T>>(json);
             }
+
             return null;
         }
-
-        public async Task<T> GetAsync(string url, int id)
+        public async Task<T> GetAsync(string url, int id, string token)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url + id);
-            var httpclient = HttpClientFactory.CreateClient();
-            HttpResponseMessage response = await httpclient.SendAsync(request);
+            if (token.Length > 0)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<T>(json);
             }
+
             return null;
         }
-
-        public async Task<ModelStateError> UpdateAsync(string url, T entity)
+        public async Task<ModelStateError> UpdateAsync(string url, T entity, string token)
         {
             var request = new HttpRequestMessage(HttpMethod.Put, url);
+            if (token.Length > 0)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
             request.Content = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, Resource.ContentType);
-            var httpclient = HttpClientFactory.CreateClient();
-            HttpResponseMessage response = await httpclient.SendAsync(request);
+
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
@@ -114,13 +148,11 @@ namespace ProductWEB.Utility
                     Response = new Response()
                     {
                         Errors = new List<Errors>()
-                    {
-                      new Errors(){ ErrorMessage = "No se encontró el producto que se desea actualizar"}
+                        {
+                            new Errors(){ErrorMessage = "No se encontró el producto que desea actualizar" }
+                        }
                     }
-                    }
-
                 };
-
             }
 
             if (response.StatusCode == HttpStatusCode.InternalServerError)
@@ -134,6 +166,60 @@ namespace ProductWEB.Utility
                 Response = new Response()
                 {
                     Errors = new List<Errors>()
+                }
+            };
+        }
+        public async Task<ModelStateError> LoginAsync(string url, T entity)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+
+            request.Content = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, Resource.ContentType);
+
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.NotFound ||
+                response.StatusCode == HttpStatusCode.BadRequest ||
+                response.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ModelStateError>(json);
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var modelError = JsonConvert.DeserializeObject<ModelStateError>(content);
+
+            modelError.Response = new Response()
+            {
+                Errors = new List<Errors>()
+            };
+            return modelError;
+        }
+        public async Task<ModelStateError> RegisterAsync(string url, T entity)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+
+            request.Content = new StringContent(JsonConvert.SerializeObject(entity), Encoding.UTF8, Resource.ContentType);
+
+            var httpClient = httpClientFactory.CreateClient();
+
+            HttpResponseMessage response = await httpClient.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.NotFound ||
+                response.StatusCode == HttpStatusCode.BadRequest ||
+                response.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<ModelStateError>(json);
+            }
+
+            return new ModelStateError()
+            {
+                Response = new Response()
+                {
+                    Errors = new List<Errors>()
+
                 }
             };
         }

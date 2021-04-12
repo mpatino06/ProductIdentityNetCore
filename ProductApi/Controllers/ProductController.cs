@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿
+
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -9,36 +7,37 @@ using Microsoft.AspNetCore.Mvc;
 using ProductApi.Models;
 using ProductApi.Models.DTO;
 using ProductApi.Repository.IRepository;
+using System.Collections.Generic;
 
 namespace ProductApi.Controllers
 {
     [Route("api/product")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Customer")]
     public class ProductController : ControllerBase
     {
-        public IProductRepository ProductRepository { get; }
-        public IMapper Mapper { get; }
+        private readonly IProductRepository productRepository;
+        private readonly IMapper mapper;
 
         public ProductController(IProductRepository productRepository, IMapper mapper)
         {
-            ProductRepository = productRepository;
-            Mapper = mapper;
+            this.productRepository = productRepository;
+            this.mapper = mapper;
         }
 
         [HttpGet]
         public IActionResult GetAllProduct()
         {
-            var products = ProductRepository.GetAllProduct();
-            return Ok(Mapper.Map<List<ProductDto>>(products));
+            var products = productRepository.GetAllProduct();
+            return Ok(mapper.Map<List<ProductDto>>(products));
         }
 
         [HttpGet("{id}", Name = "GetProductById")]
         public IActionResult GetProductById(int id)
         {
-            var product = ProductRepository.GetProduct(id);
+            var product = productRepository.GetProduct(id);
             if (product == null) return NotFound();
-            return Ok(Mapper.Map<ProductDto>(product));
+            return Ok(mapper.Map<ProductDto>(product));
         }
 
         [HttpPost]
@@ -46,14 +45,14 @@ namespace ProductApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            if (ProductRepository.ProductExist(productDto.Name))
+            if (productRepository.ProductExist(productDto.Name))
             {
                 ModelState.AddModelError("Response", $"el producto con el nombre {productDto.Name} ya existe");
                 return StatusCode(404, ModelState);
             }
 
-            var product = Mapper.Map<Product>(productDto);
-            if (!ProductRepository.CreateProduct(product))
+            var product = mapper.Map<Product>(productDto);
+            if (!productRepository.CreateProduct(product))
             {
                 ModelState.AddModelError("Response", $"Ha ocurrido un error al intentar guardar el producto {productDto.Name}");
                 return StatusCode(500, ModelState);
@@ -67,8 +66,8 @@ namespace ProductApi.Controllers
         {
             if (id != productDto.IdProduct) return BadRequest(ModelState);
             
-            var product = Mapper.Map<Product>(productDto);
-            if (!ProductRepository.UpdateProduct(product))
+            var product = mapper.Map<Product>(productDto);
+            if (!productRepository.UpdateProduct(product))
             {
                 ModelState.AddModelError("Response", $"Ha ocurrido un error al intentar actualizar el producto {productDto.Name}");
                 return StatusCode(500, ModelState);
@@ -79,11 +78,11 @@ namespace ProductApi.Controllers
         [HttpDelete("{id}")]
         public IActionResult DeleteProduct(int id)
         {
-            if (!ProductRepository.ProductExist(id)) return NotFound();
+            if (!productRepository.ProductExist(id)) return NotFound();
 
-            var product = ProductRepository.GetProduct(id);
+            var product = productRepository.GetProduct(id);
 
-            if (!ProductRepository.DeleteProduct(product))
+            if (!productRepository.DeleteProduct(product))
             {
                 ModelState.AddModelError("Response", $"Ha ocurrido un error al intentar eliminar el producto {product.Name}");
                 return StatusCode(500, ModelState);

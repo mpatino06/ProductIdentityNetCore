@@ -23,7 +23,6 @@ namespace ProductApi.Controllers
         private readonly UserManager<IdentityUser> userManager;
         private readonly SignInManager<IdentityUser> signInManager;
         private readonly RoleManager<IdentityRole> roleManager;
-        private readonly IHttpClientFactory httpClientFactory;
         private readonly IConfiguration configuration;
         private readonly ApiTranslator translator;
 
@@ -36,7 +35,6 @@ namespace ProductApi.Controllers
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.roleManager = roleManager;
-            this.httpClientFactory = httpClientFactory;
             this.configuration = configuration;
             translator = new ApiTranslator(httpClientFactory, configuration);
         }
@@ -99,6 +97,7 @@ namespace ProductApi.Controllers
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
+  
             var claims = new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id)

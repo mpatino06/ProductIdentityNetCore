@@ -9,6 +9,8 @@ namespace ProductWEB.Utility
     {
         public const string APIBaseUrl = "http://localhost:19884/";
         public const string ProductApiUrl = APIBaseUrl + "api/product/";
+        public const string RegisterApiUrl = APIBaseUrl + "api/user/register/";
+        public const string LoginApiUrl = APIBaseUrl + "api/user/login/";
         public const string ContentType = "application/json";
 
     }
